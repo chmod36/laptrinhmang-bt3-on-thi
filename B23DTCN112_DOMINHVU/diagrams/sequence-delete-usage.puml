@@ -1,0 +1,51 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 170
+skinparam BoxPadding 2
+skinparam defaultFontSize 17
+hide footbox
+autonumber "<b>0."
+
+actor "Người dùng" as U
+box "Client (Java Swing)" #eef4fc
+participant ":DeletePanel" as P
+participant ":MedicineClient" as C
+participant ":UdpClient" as UC
+end box
+box "Server" #fff7e0
+participant ":MedicineServer" as S
+end box
+
+U -> P : chọn công dụng,\nnhấn nút xóa
+activate P
+P -> U : hộp thoại xác nhận
+break chọn "Không"
+  P --> U : không gửi yêu cầu
+end
+U -> P : "Có, xóa"
+P -> C : delete(DEL_USE, id)
+deactivate P
+activate C
+C -> UC : send(DEL_USE, id)\n(luồng nền SwingWorker)
+activate UC
+UC -> S : gói UDP\nDEL_USE<TAB>id
+activate S
+alt không có mã id
+  S --> UC : ERR Không tìm thấy
+else còn thuốc dùng
+  S --> UC : ERR Không thể xóa:\nđang được n thuốc dùng
+else hợp lệ
+  S -> S : usages.remove(id)
+  S --> UC : OK Đã xóa
+end
+deactivate S
+break quá 5 giây không phản hồi
+  UC --> C : SocketTimeoutException\n→ ERR Lỗi kết nối
+end
+UC --> C : Response(ok, body)
+deactivate UC
+C -> C : ghi dòng xanh/đỏ\nvào tab "Kết quả xóa"
+C -> U : hộp thoại kết quả,\nmở tab "Kết quả xóa"
+C -> UC : LIST_USE, LIST_MED\n(tải lại danh sách)
+deactivate C
+@enduml

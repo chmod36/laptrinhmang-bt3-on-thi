@@ -1,0 +1,30 @@
+QUẢN LÝ THUỐC THEO CÔNG DỤNG (UDP) – PHẦN CÁ NHÂN: XÓA THUỐC, XÓA CÔNG DỤNG, HIỂN THỊ KẾT QUẢ XÓA
+Sinh viên: Đỗ Minh Vũ – MSSV: B23DTCN112 – Lớp: D23TXCN04-B
+
+Yêu cầu: JDK 17 trở lên.
+
+A. Chạy bằng NetBeans
+1. File > Open Project > chọn thư mục "source" (có file pom.xml).
+2. Source Packages > bt3.server > MedicineServer.java > Run File (Shift+F6).
+   Output hiện: "Server UDP quản lý thuốc đang lắng nghe tại cổng 9876".
+3. Giữ Server chạy, mở bt3.client > MedicineClient.java > Run File (Shift+F6).
+4. Chọn một dòng ở tab "1. Xóa thuốc" hoặc "2. Xóa công dụng", nhấn nút xóa, chọn "Có, xóa".
+   Kết quả hiện ở hộp thoại và ở tab "3. Kết quả xóa".
+
+B. Chạy bằng dòng lệnh (trong thư mục "source")
+   javac -encoding UTF-8 -d out src/main/java/bt3/common/*.java src/main/java/bt3/server/*.java src/main/java/bt3/client/*.java
+   java -cp out bt3.server.MedicineServer
+   java -cp out bt3.client.MedicineClient      (chạy ở cửa sổ dòng lệnh khác)
+
+C. Chạy bằng IntelliJ IDEA
+1. File > Open > chọn thư mục "source" (có file pom.xml) > Open as Project > Trust Project.
+2. File > Project Structure > Project > SDK: chọn JDK 17 trở lên (chưa có thì bấm Download JDK).
+3. Mở src/main/java/bt3/server/MedicineServer.java > bấm mũi tên xanh cạnh hàm main > Run.
+   Tab Run hiện: "Server UDP quản lý thuốc đang lắng nghe tại cổng 9876".
+4. Giữ Server chạy, mở bt3/client/MedicineClient.java > Run.
+   Không chạy MedicineServer hai lần (cổng 9876 đã bị chiếm); khi chạy lại Server mà IntelliJ hỏi thì chọn Stop and Rerun.
+
+Ghi chú
+- Server: 127.0.0.1:9876. Client chờ phản hồi tối đa 5 giây, quá thời gian thì báo lỗi kết nối.
+- Không xóa được công dụng đang có thuốc dùng: xóa các thuốc đó trước.
+- Dữ liệu lưu trong bộ nhớ; khởi động lại Server thì dữ liệu mẫu được nạp lại.

@@ -1,0 +1,9 @@
+# Chỉ đưa lên phần cần để luyện tập: code và tài liệu ôn
+/*
+!/.gitignore
+!/README.md
+!/OnVanDap/
+!/B23DTCN112_DOMINHVU/
+/B23DTCN112_DOMINHVU/*.pdf
+target/
+.idea/
