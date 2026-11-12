@@ -1,0 +1,8 @@
+package bt3.network;
+
+public class RequestException extends Exception {
+
+    public RequestException(String message) {
+        super(message);
+    }
+}

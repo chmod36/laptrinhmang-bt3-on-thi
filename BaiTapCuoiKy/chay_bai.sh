@@ -19,7 +19,7 @@ caidat)
     exit 0
     ;;
 client)
-    exec java -cp "$CP" bt3.client.MedicineClient
+    exec java -cp "$CP" bt3.ui.MedicineClient
     ;;
 reset)
     mysql -h127.0.0.1 -uroot -e "DROP DATABASE IF EXISTS quanlythuoc" 2>/dev/null \
@@ -47,7 +47,7 @@ javac -encoding UTF-8 -d "$OUT/classes" $(find "$SRC/src/main/java" -name '*.jav
 cp -r "$SRC/src/main/resources/." "$OUT/classes/"
 
 echo "3) Mở Client trong 3 giây (mở thêm Client: ./chay_bai.sh client)"
-(sleep 3 && java -cp "$CP" bt3.client.MedicineClient) &
+(sleep 3 && java -cp "$CP" bt3.ui.MedicineClient) &
 
 echo "4) Chạy Server (Ctrl+C để tắt):"
-exec java -cp "$CP" bt3.server.MedicineServer
+exec java -cp "$CP" bt3.network.MedicineServer

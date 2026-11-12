@@ -8,7 +8,7 @@
     <properties>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <exec.mainClass>bt3.client.MedicineClient</exec.mainClass>
+        <exec.mainClass>bt3.ui.MedicineClient</exec.mainClass>
     </properties>
     <dependencies>
         <dependency>
