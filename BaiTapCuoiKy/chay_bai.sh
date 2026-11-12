@@ -2,8 +2,9 @@
 set -e
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 SRC="$ROOT/B23DTCN112_DOMINHVU/source"
+[ -d "$ROOT/src/main/java" ] && SRC="$ROOT"
 OUT="$HOME/.cache/ltm-quanlythuoc"
-CP="$OUT/classes:$ROOT/lib/mysql-connector-j-9.3.0.jar"
+CP="$OUT/classes:$SRC/../../lib/mysql-connector-j-9.3.0.jar"
 
 mysql_ready() {
     (exec 3<>/dev/tcp/127.0.0.1/3306) 2>/dev/null
@@ -34,14 +35,10 @@ client)
     exec java -cp "$CP" bt3.ui.MedicineClient
     ;;
 web)
-    command -v docker >/dev/null || { echo "Cần Docker để chạy phpMyAdmin."; exit 1; }
     start_mysql
-    docker start ltm-web >/dev/null 2>&1 || docker run -d --name ltm-web --network host \
-        -e APACHE_PORT=8090 -e PMA_HOST=127.0.0.1 -e PMA_USER=root -e PMA_PASSWORD= phpmyadmin:5.2 >/dev/null
-    until curl -s -o /dev/null http://localhost:8090; do sleep 1; done
-    echo "phpMyAdmin: http://localhost:8090 (database quanlythuoc). Tắt: docker stop ltm-web"
-    xdg-open "http://localhost:8090/index.php?route=/database/structure&db=quanlythuoc" >/dev/null 2>&1 || true
-    exit 0
+    (sleep 2 && xdg-open http://localhost:8090 >/dev/null 2>&1) &
+    exec java -cp "$ROOT/lib/mysql-connector-j-9.3.0.jar" "$ROOT/tools/XemDuLieuWeb.java" \
+        "$SRC/src/main/resources/db.properties"
     ;;
 reset)
     mysql -h127.0.0.1 -uroot -e "DROP DATABASE IF EXISTS quanlythuoc" 2>/dev/null \
