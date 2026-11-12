@@ -1,0 +1,66 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 190
+skinparam BoxPadding 2
+skinparam defaultFontSize 15
+hide footbox
+autonumber "<b>0."
+
+actor "Nhân viên" as U
+box "Client (Java Swing)" #eef4fc
+participant ":MedicinePanel" as P
+participant ":MedicineClient" as C
+participant ":ServerApi" as A
+end box
+box "Server" #fff7e0
+participant ":RequestHandler" as H
+participant ":DeleteService" as D
+end box
+database "MySQL" as DB
+
+U -> P : chọn nhiều dòng,\nnhấn "Xóa thuốc đã chọn"
+activate P
+P -> U : hộp xác nhận (danh sách thuốc)
+break chọn "Không"
+  P --> U : không gửi yêu cầu
+end
+U -> P : "Đồng ý"
+P -> C : send(MED_DELETE, "T001,T002,T007")
+deactivate P
+activate C
+C -> A : send() trên luồng nền
+activate A
+A -> H : gói UDP: MED_DELETE<TAB>T001,T002,T007
+activate H
+H -> D : trash(ids, client)
+activate D
+loop từng mã thuốc (mỗi mã một transaction)
+  D -> DB : SELECT ... FOR UPDATE
+  alt không tồn tại / đã ở thùng rác
+    D -> D : BatchItem(ok = false)
+  else hợp lệ
+    D -> DB : UPDATE thuoc SET ngay_xoa = NOW()
+    D -> D : BatchItem(ok = true)
+  end
+  D -> DB : INSERT nhat_ky_xoa
+end
+D --> H : Response(OK nếu ≥ 1 thành công,\ncác dòng BatchItem)
+deactivate D
+H --> A : gói UDP phản hồi
+deactivate H
+break quá 5 giây không có phản hồi
+  A --> C : SocketTimeoutException
+  C -> U : "Lỗi kết nối Server" + nút Thử lại
+end
+A --> C : Response
+deactivate A
+C -> U : kết quả từng thuốc + nút "Hoàn tác"
+opt nhấn "Hoàn tác (khôi phục)"
+  C -> A : send(TRASH_RESTORE, các mã đã xóa)
+  A -> H : gói UDP TRASH_RESTORE
+  H --> A : kết quả khôi phục
+  A --> C : Response
+end
+C -> A : refreshAll() tải lại 4 danh sách
+deactivate C
+@enduml

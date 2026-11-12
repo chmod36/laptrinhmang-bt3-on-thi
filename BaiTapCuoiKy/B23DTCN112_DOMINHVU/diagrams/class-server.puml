@@ -1,0 +1,87 @@
+@startuml
+!include style.iuml
+skinparam defaultFontSize 13
+hide empty members
+skinparam nodesep 40
+skinparam ranksep 45
+
+package "bt3.server" {
+  class MedicineServer {
+    + {static} main(args : String[])
+    - {static} fit(r : Response) : Response
+  }
+  class RequestHandler {
+    + handle(request : String, client : String) : Response
+    - dispatch(cmd : Command, a : Args, client : String) : Response
+  }
+  class DeleteService {
+    + trash(ids : List<String>, client : String) : Response
+    + restore(ids : List<String>, client : String) : Response
+    + purge(ids : List<String>, client : String) : Response
+    + emptyTrash(client : String) : Response
+    + usageDependents(usageId : String) : Response
+    + deleteUsage(id, mode : UsageDeleteMode, target, client) : Response
+    - batch(ids, step : Step, client) : Response
+    - log(item : BatchItem, action, type, client)
+  }
+  class Database {
+    + init()
+    + query(work : Work<T>) : T
+    + inTransaction(work : Work<T>) : T
+  }
+  class MedicineDao <<DAO>> {
+    + search() / trash() / byUsage() / find()
+    + moveToTrash(c, id) / restore(c, id) / purge(c, id)
+    + changeUsage(c, from, to) : int
+    + purgeByUsage(c, usageId) : int
+  }
+  class UsageDao <<DAO>> {
+    + all() / find() / insert() / update() / delete()
+  }
+  class DeleteLogDao <<DAO>> {
+    + add(c, log : DeleteLog)
+    + latest(c, limit : int) : List<DeleteLog>
+  }
+}
+
+package "bt3.common" {
+  class Medicine <<record>> {
+    id : String
+    name : String
+    price : long
+    usageId : String
+    form : String
+    deletedAt : String
+    + inTrash() : boolean
+  }
+  class Usage <<record>> {
+    id, name, description : String
+    activeCount, trashCount : int
+  }
+  class DeleteLog <<record>> {
+    time, action, objectType : String
+    objectId, objectName : String
+    success : boolean
+    detail, client : String
+  }
+  class BatchItem <<record>> {
+    id, name : String
+    ok : boolean
+    message : String
+  }
+  class Response <<record>> {
+    ok : boolean
+    body : String
+    + parse(raw : String) : Response
+    + rows() : List<String[]>
+  }
+}
+
+MedicineServer --> RequestHandler
+RequestHandler --> DeleteService
+DeleteService --> Database
+DeleteService ..> MedicineDao
+DeleteService ..> UsageDao
+DeleteService ..> DeleteLogDao
+Usage "1" -down- "0..*" Medicine
+@enduml

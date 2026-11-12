@@ -1,0 +1,51 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 190
+skinparam BoxPadding 2
+skinparam defaultFontSize 15
+hide footbox
+autonumber "<b>0."
+
+actor "Nhân viên" as U
+box "Client (Java Swing)" #eef4fc
+participant ":TrashPanel" as P
+participant ":MedicineClient" as C
+end box
+box "Server" #fff7e0
+participant ":DeleteService" as D
+end box
+database "MySQL" as DB
+
+U -> P : chọn thuốc trong Thùng rác
+activate P
+alt nhấn "Khôi phục"
+  P -> C : send(TRASH_RESTORE, ids)
+else nhấn "Xóa vĩnh viễn"
+  P -> U : xác nhận (không thể hoàn tác)
+  U -> P : "Đồng ý"
+  P -> C : send(TRASH_PURGE, ids)
+else nhấn "Dọn sạch thùng rác"
+  P -> U : xác nhận xóa toàn bộ
+  U -> P : "Đồng ý"
+  P -> C : send(TRASH_EMPTY)
+end
+deactivate P
+activate C
+C -> D : gói UDP
+activate D
+loop từng mã thuốc
+  D -> DB : SELECT ... FOR UPDATE
+  alt thuốc không nằm trong thùng rác
+    D -> D : BatchItem(ok = false)
+  else khôi phục
+    D -> DB : UPDATE thuoc SET ngay_xoa = NULL
+  else xóa vĩnh viễn
+    D -> DB : DELETE FROM thuoc
+  end
+  D -> DB : INSERT nhat_ky_xoa
+end
+D --> C : danh sách BatchItem
+deactivate D
+C -> U : kết quả từng thuốc, tải lại dữ liệu
+deactivate C
+@enduml

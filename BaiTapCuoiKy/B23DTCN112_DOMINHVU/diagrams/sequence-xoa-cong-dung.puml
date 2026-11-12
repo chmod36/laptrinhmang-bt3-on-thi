@@ -1,0 +1,68 @@
+@startuml
+!include style.iuml
+skinparam maxMessageSize 190
+skinparam BoxPadding 2
+skinparam defaultFontSize 15
+hide footbox
+autonumber "<b>0."
+
+actor "Nhân viên" as U
+box "Client (Java Swing)" #eef4fc
+participant ":UsagePanel" as P
+participant ":UsageDeleteDialog" as G
+participant ":MedicineClient" as C
+end box
+box "Server" #fff7e0
+participant ":DeleteService" as D
+end box
+database "MySQL" as DB
+
+U -> P : chọn công dụng,\nnhấn "Xóa công dụng đã chọn"
+activate P
+P -> C : call(USE_CHECK, id)
+activate C
+C -> D : gói UDP USE_CHECK<TAB>CD02
+activate D
+D -> DB : SELECT thuốc theo ma_cd
+D --> C : OK + danh sách thuốc đang dùng
+deactivate D
+C --> P : dependents
+deactivate C
+alt không có thuốc nào dùng
+  P -> U : hộp xác nhận
+  U -> P : "Đồng ý" → mode = ONLY
+else có thuốc đang dùng
+  P -> G : ask(usage, dependents, others)
+  activate G
+  G -> U : bảng thuốc + 2 lựa chọn
+  U -> G : chọn "Chuyển sang CD01"\nhoặc "Xóa vĩnh viễn kèm thuốc"
+  G --> P : Choice(MOVE, CD01) / Choice(CASCADE)
+  deactivate G
+  opt CASCADE
+    P -> U : xác nhận lần 2 (không hoàn tác được)
+  end
+end
+P -> C : send(USE_DELETE, id, mode, target)
+deactivate P
+activate C
+C -> D : gói UDP USE_DELETE<TAB>CD02<TAB>MOVE<TAB>CD01
+activate D
+D -> DB : BEGIN TRANSACTION
+D -> DB : SELECT lại thuốc đang dùng
+alt ONLY nhưng vẫn còn thuốc (client khác vừa thêm)
+  D -> DB : ROLLBACK
+  D --> C : ERR Không thể xóa: đang được n thuốc dùng
+else MOVE
+  D -> DB : UPDATE thuoc SET ma_cd = CD01
+  D -> DB : DELETE cong_dung; COMMIT
+  D --> C : OK Đã xóa, chuyển n thuốc sang CD01
+else CASCADE
+  D -> DB : DELETE thuoc WHERE ma_cd = CD02
+  D -> DB : DELETE cong_dung; COMMIT
+  D --> C : OK Đã xóa, xóa vĩnh viễn n thuốc
+end
+D -> DB : INSERT nhat_ky_xoa
+deactivate D
+C -> U : hộp thoại kết quả, tải lại dữ liệu
+deactivate C
+@enduml

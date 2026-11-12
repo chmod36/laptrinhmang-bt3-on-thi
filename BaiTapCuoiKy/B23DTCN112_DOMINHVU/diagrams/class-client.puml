@@ -1,0 +1,96 @@
+@startuml
+!include style.iuml
+skinparam defaultFontSize 13
+hide empty members
+skinparam nodesep 35
+skinparam ranksep 50
+
+package "bt3.client" {
+  class MedicineClient {
+    + api : ServerApi
+    + refreshAll()
+    + call(doing, task : Callable<T>, onDone : Consumer<T>)
+    + send(doing, cmd : Command, onDone, args...)
+    + showBatch(title, r : Response, undoText) : List<String>
+    + showMessage(title, r : Response)
+    + confirm(title, message) : boolean
+  }
+  abstract class TablePanel {
+    # model : DefaultTableModel
+    # table : JTable
+    # addButton(text, color, needsSelection, action)
+    # selected(column : int) : List<String>
+    + setRows(rows : List<Object[]>)
+    + setBusy(busy : boolean)
+  }
+  class MedicinePanel {
+    + keyword() : String
+    + usageFilter() : String
+    - openForm(m : Medicine, isNew : boolean)
+    - delete()
+    - sendDelete(ids : List<String>)
+  }
+  class UsagePanel {
+    - delete()
+    - decide(u : Usage, dependents : List<Medicine>)
+    - sendDelete(u, mode : UsageDeleteMode, target)
+  }
+  class TrashPanel {
+    - restore()
+    - purge()
+    - empty()
+  }
+  class HistoryPanel {
+    - applyFilter()
+  }
+  class UsageDeleteDialog {
+    + {static} ask(parent, u, dependents, others) : Optional<Choice>
+  }
+  class MedicineForm {
+    + {static} open(parent, m, usages, isNew) : Optional<Medicine>
+  }
+  class ServerApi {
+    + send(cmd : Command, args...) : Response
+    + medicines(keyword, usageId) : List<Medicine>
+    + trash() : List<Medicine>
+    + usageDependents(id) : List<Medicine>
+    + logs() : List<DeleteLog>
+  }
+}
+
+package "bt3.common" {
+  class Protocol {
+    + HOST, PORT, TIMEOUT_MS
+    + request(cmd, args...) : String
+  }
+  enum Command {
+    MED_LIST, MED_ADD, MED_UPDATE, MED_DELETE
+    TRASH_LIST, TRASH_RESTORE, TRASH_PURGE, TRASH_EMPTY
+    USE_LIST, USE_ADD, USE_UPDATE, USE_CHECK, USE_DELETE
+    LOG_LIST
+  }
+  enum UsageDeleteMode {
+    ONLY
+    MOVE
+    CASCADE
+  }
+  class Validation {
+    + {static} medicine(...) : Medicine
+    + {static} ids(raw, what) : List<String>
+  }
+}
+
+TablePanel <|-- MedicinePanel
+TablePanel <|-- UsagePanel
+TablePanel <|-- TrashPanel
+TablePanel <|-- HistoryPanel
+MedicineClient *-- "4" TablePanel
+MedicineClient *-- ServerApi
+TablePanel --> MedicineClient : app
+UsagePanel ..> UsageDeleteDialog
+MedicinePanel ..> MedicineForm
+MedicineForm ..> Validation
+ServerApi ..> Protocol
+Protocol +-- Command
+Protocol +-- UsageDeleteMode
+@enduml

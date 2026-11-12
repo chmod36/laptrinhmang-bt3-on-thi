@@ -1,0 +1,28 @@
+@startuml
+!include style.iuml
+left to right direction
+skinparam packageStyle rectangle
+actor "Nhân viên\nnhà thuốc" as User
+
+rectangle "Hệ thống quản lý thuốc theo công dụng (Client – Server UDP)" {
+  usecase "Xem danh sách thuốc" as UC1
+  usecase "Tìm kiếm thuốc\n(mã, tên, công dụng)" as UC2
+  usecase "Thêm thuốc" as UC3
+  usecase "Sửa thuốc" as UC4
+  usecase "Xem, thêm, sửa\ncông dụng" as UC5
+  usecase "<b>Xóa thuốc</b>" as D1 #fde2e2
+  usecase "<b>Xóa công dụng</b>" as D2 #fde2e2
+  usecase "<b>Quản lý thùng rác</b>" as D3 #fde2e2
+  usecase "<b>Xem lịch sử xóa</b>" as D4 #fde2e2
+}
+
+User -- UC1
+User -- UC2
+User -- UC3
+User -- UC4
+User -- UC5
+User -- D1
+User -- D2
+User -- D3
+User -- D4
+@enduml

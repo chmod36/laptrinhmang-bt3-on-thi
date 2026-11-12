@@ -1,0 +1,49 @@
+@startuml
+!include style.iuml
+skinparam linetype ortho
+hide circle
+skinparam EntityBackgroundColor #ffffff
+skinparam EntityBorderColor #1f2328
+
+entity "cong_dung" as CD {
+  * **ma_cd** : VARCHAR(10) <<PK>>
+  --
+  * ten_cd : VARCHAR(100)
+  mo_ta : VARCHAR(255)
+}
+
+entity "thuoc" as T {
+  * **ma_thuoc** : VARCHAR(10) <<PK>>
+  --
+  * ten_thuoc : VARCHAR(100)
+  * gia : BIGINT
+  * ma_cd : VARCHAR(10) <<FK>>
+  * dang_bao_che : VARCHAR(50)
+  ngay_xoa : DATETIME (NULL = đang bán)
+}
+
+entity "nhat_ky_xoa" as L {
+  * **id** : INT <<PK, AUTO_INCREMENT>>
+  --
+  * thoi_gian : DATETIME
+  * hanh_dong : VARCHAR(40)
+  * doi_tuong : VARCHAR(20)
+  * ma_doi_tuong : VARCHAR(10)
+  ten_doi_tuong : VARCHAR(100)
+  * thanh_cong : TINYINT(1)
+  * chi_tiet : VARCHAR(500)
+  * dia_chi_client : VARCHAR(60)
+}
+
+CD ||-right-o{ T : có
+CD -[hidden]down- L
+note right of L
+  Không có khóa ngoại: nhật ký giữ mã và tên
+  dạng chữ để vẫn còn sau khi thuốc hoặc
+  công dụng bị xóa vĩnh viễn.
+end note
+note bottom of T
+  ma_cd → cong_dung.ma_cd
+  ON UPDATE CASCADE, ON DELETE RESTRICT
+end note
+@enduml
