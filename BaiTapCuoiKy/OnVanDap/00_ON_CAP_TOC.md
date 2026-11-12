@@ -36,7 +36,7 @@ Bài cần 2 thứ: **Java** (để chạy code) và **MySQL** (để lưu dữ 
 
 **Laptop ở nhà (Kubuntu, chưa có gì), làm một lần duy nhất:**
 ```bash
-git clone -b on-cap-toc https://github.com/quzkhanh/laptrinhmang-bt3-on-thi.git
+git clone -b udp-medicine-mysql https://github.com/quzkhanh/laptrinhmang-bt3-on-thi.git
 cd laptrinhmang-bt3-on-thi/BaiTapCuoiKy
 ./chay_bai.sh caidat
 ```
@@ -60,10 +60,10 @@ Script tự làm 4 việc: bật MySQL → biên dịch → mở cửa sổ Clie
 
 1. Bật MySQL. Trên Windows mở **XAMPP → Start MySQL**. Trên Linux là MariaDB, đã tự chạy sau khi cài. Code chỉ cần một MySQL ở `localhost:3306`, tài khoản `root`, mật khẩu trống (sửa ở `src/main/resources/db.properties`).
 2. Biên dịch: `javac -encoding UTF-8 -d out …*.java` (dịch code thành dạng máy chạy được).
-3. Chạy Server: `java -cp out:mysql-connector-j.jar bt3.server.MedicineServer`
-4. Chạy Client ở cửa sổ khác: `java -cp out bt3.client.MedicineClient`
+3. Chạy Server: `java -cp out:mysql-connector-j.jar bt3.network.MedicineServer`
+4. Chạy Client ở cửa sổ khác: `java -cp out bt3.ui.MedicineClient`
 
-Trên NetBeans/IntelliJ: mở thư mục `source` (có `pom.xml`) → chuột phải `MedicineServer.java` → Run File, rồi `MedicineClient.java` → Run File. **Luôn chạy Server trước.**
+Trên NetBeans/IntelliJ: mở thư mục `source` (có `pom.xml`) → chuột phải `network/MedicineServer.java` → Run File, rồi `ui/MedicineClient.java` → Run File. **Luôn chạy Server trước.**
 
 ### Kịch bản demo (làm thử 1 lần trước khi thi, đi thi làm y hệt)
 
@@ -87,21 +87,28 @@ Nhìn Konsole Server: mỗi yêu cầu là 1 dòng log, ví dụ
 
 ## Phần 3 – Đọc code: chỉ cần nhớ 6 chỗ (40 phút)
 
-Code ở `B23DTCN112_DOMINHVU/source/src/main/java/bt3/`. Chia 3 gói:
-- `common/` – đồ dùng chung cả 2 bên (luật giao tiếp, kiểu dữ liệu, kiểm tra đầu vào).
-- `server/` – quầy chính: nhận gói tin, gọi MySQL.
-- `client/` – giao diện Swing.
+Code ở `B23DTCN112_DOMINHVU/source/src/main/java/bt3/`, **chia folder theo chức năng**. Muốn xem chức năng nào thì mở folder đó: trong đó có đủ giao diện (`...Panel`), xử lý (`...Service`) và câu SQL (`...Dao`).
 
-### ① Luật giao tiếp – `common/Protocol.java`
+| Folder | Lo việc gì | File chính |
+|---|---|---|
+| `network/` | Gửi nhận UDP giữa Client và Server | `Protocol` (luật), `ServerApi` (Client gửi), `MedicineServer` (Server nhận), `RequestHandler` (chia lệnh), `Response`, `Validation` |
+| `database/` | Kết nối MySQL, transaction | `Database`, `Sql` |
+| `medicine/` | Tab 1 – Thuốc | `MedicinePanel`, `MedicineForm`, `CatalogService`, `MedicineDao`, `Medicine` |
+| `usage/` | Tab 2 – Công dụng | `UsagePanel`, `UsageForm`, `UsageDeleteDialog`, `UsageDao`, `Usage` |
+| `trash/` | Xóa + Tab 3 – Thùng rác | `DeleteService` (toàn bộ logic xóa), `TrashPanel`, `BatchItem` |
+| `history/` | Tab 4 – Lịch sử xóa | `HistoryPanel`, `DeleteLogDao`, `DeleteLog` |
+| `ui/` | Khung cửa sổ, hàm `main` của Client | `MedicineClient`, `Ui`, `TablePanel`, `FormDialog` |
+
+### ① Luật giao tiếp – `network/Protocol.java`
 ```java
 public static final int PORT = 9876;        // Server ở phòng 9876
 public static final int TIMEOUT_MS = 5000;   // Client chờ tối đa 5 giây
 public static final String FIELD = "\t";     // các phần trong 1 lệnh cách nhau bằng dấu Tab
 ```
 Lệnh là một dòng chữ: `TÊN_LỆNH <Tab> tham số 1 <Tab> tham số 2…`. Danh sách lệnh nằm trong `enum Command` (MED_DELETE, TRASH_RESTORE, USE_DELETE, LOG_LIST…).
-Trả lời: `OK <Tab> nội dung` hoặc `ERR <Tab> lý do` (`common/Response.java`).
+Trả lời: `OK <Tab> nội dung` hoặc `ERR <Tab> lý do` (`network/Response.java`).
 
-### ② Client gửi và chờ – `client/ServerApi.java:24-35` (QUAN TRỌNG NHẤT)
+### ② Client gửi và chờ – `network/ServerApi.java:22-33` (QUAN TRỌNG NHẤT)
 ```java
 DatagramSocket socket = new DatagramSocket();          // mở 1 "hòm thư" UDP, port tự chọn
 socket.setSoTimeout(Protocol.TIMEOUT_MS);              // chờ thư trả lời tối đa 5 giây
@@ -110,7 +117,7 @@ socket.receive(packet);                                // đứng chờ thư tr�
 ```
 Quá 5 giây không có thư → Java ném `SocketTimeoutException` → giao diện báo lỗi + nút Thử lại.
 
-### ③ Server nhận và trả – `server/MedicineServer.java:25-38`
+### ③ Server nhận và trả – `network/MedicineServer.java:25-41`
 ```java
 DatagramSocket socket = new DatagramSocket(Protocol.PORT); // giữ phòng 9876
 socket.receive(packet);                                    // chờ thư tới (vòng lặp while(true))
@@ -119,21 +126,21 @@ socket.send(new DatagramPacket(out, out.length, packet.getSocketAddress())); // 
 ```
 `packet.getSocketAddress()` = địa chỉ người gửi ghi trên phong bì, nhờ đó Server biết trả về đâu.
 
-### ④ Chia lệnh – `server/RequestHandler.java:43-60`
+### ④ Chia lệnh – `network/RequestHandler.java:42-60`
 Một `switch` lớn: lệnh `MED_DELETE` → `deletes.trash(...)`, `USE_DELETE` → `deletes.deleteUsage(...)`… Lệnh lạ → `ERR Lệnh không hợp lệ`.
 Hàm `handle` có chữ `synchronized` = mỗi lúc chỉ xử lý 1 yêu cầu, tránh 2 Client sửa cùng lúc.
 
-### ⑤ Logic xóa – `server/DeleteService.java`
-- Xóa thuốc = `UPDATE thuoc SET ngay_xoa = NOW()` (`server/MedicineDao.java:49`) → **xóa mềm** (soft delete), còn khôi phục được.
+### ⑤ Logic xóa – `trash/DeleteService.java`
+- Xóa thuốc = `UPDATE thuoc SET ngay_xoa = NOW()` (`medicine/MedicineDao.java:50`) → **xóa mềm** (soft delete), còn khôi phục được.
 - Khôi phục = `SET ngay_xoa = NULL`. Xóa vĩnh viễn = `DELETE FROM thuoc` (chỉ cho phép khi đã ở thùng rác).
-- Xóa công dụng có 3 chế độ (`DeleteService.java:91-100`):
+- Xóa công dụng có 3 chế độ (`DeleteService.java:96-102`):
   - `ONLY`: còn thuốc dùng thì **từ chối** ("đang được 3 thuốc sử dụng").
   - `MOVE`: `UPDATE thuoc SET ma_cd = <công dụng mới>` rồi xóa công dụng.
   - `CASCADE`: xóa vĩnh viễn hết thuốc của công dụng đó rồi xóa công dụng.
-- Tất cả chạy trong `db.inTransaction(...)` (`server/Database.java:61-73`): lỗi giữa chừng thì `rollback`, không bị "chuyển được nửa số thuốc".
+- Tất cả chạy trong `db.inTransaction(...)` (`database/Database.java:62-74`): lỗi giữa chừng thì `rollback`, không bị "chuyển được nửa số thuốc".
 - Mỗi lần xóa gọi `log(...)` → ghi bảng `nhat_ky_xoa`.
 
-### ⑥ Giao diện không bị đơ – `client/MedicineClient.java:118-135`
+### ⑥ Giao diện không bị đơ – `ui/MedicineClient.java:123-145`
 Gửi mạng phải chờ tới 5 giây. Nếu chờ ngay trên luồng giao diện thì cửa sổ **đơ cứng**. Nên dùng `SwingWorker`: `doInBackground()` gửi/chờ ở luồng phụ, `done()` quay về cập nhật giao diện.
 
 ---
@@ -152,7 +159,7 @@ Gửi mạng phải chờ tới 5 giây. Nếu chờ ngay trên luồng giao di�
 
 **6. Nhiều Client cùng lúc được không?** Được. Server chỉ có 1 socket, nhận lần lượt từng gói; `handle` có `synchronized` để không xử lý chồng nhau.
 
-**7. Gói tin UDP tối đa bao nhiêu?** 65507 byte dữ liệu (`BUFFER_SIZE`). Nếu trả về to hơn, Server trả lỗi "vượt quá kích thước một gói tin UDP" (`MedicineServer.java:45-50`).
+**7. Gói tin UDP tối đa bao nhiêu?** 65507 byte dữ liệu (`BUFFER_SIZE`). Nếu trả về to hơn, Server trả lỗi "vượt quá kích thước một gói tin UDP" (`MedicineServer.java:44-49`).
 
 **8. Vì sao tiếng Việt không lỗi?** Đổi chữ ↔ byte bằng `StandardCharsets.UTF_8` ở cả 2 bên; DB dùng `utf8mb4`.
 
@@ -162,13 +169,13 @@ Gửi mạng phải chờ tới 5 giây. Nếu chờ ngay trên luồng giao di�
 
 **11. Transaction là gì, dùng ở đâu?** "Làm hết hoặc không gì cả". Dùng khi xóa công dụng kiểu MOVE/CASCADE: nhiều câu SQL, lỗi giữa chừng thì `rollback`.
 
-**12. Chống SQL injection thế nào?** Dùng `PreparedStatement` với dấu `?` (`server/Sql.java`), không cộng chuỗi người dùng nhập vào câu SQL. Mã cũng được kiểm tra chỉ gồm chữ, số, `-`, `_` (`common/Validation.java`).
+**12. Chống SQL injection thế nào?** Dùng `PreparedStatement` với dấu `?` (`database/Sql.java`), không cộng chuỗi người dùng nhập vào câu SQL. Mã cũng được kiểm tra chỉ gồm chữ, số, `-`, `_` (`network/Validation.java`).
 
 **13. Kiểm tra dữ liệu ở đâu?** Cả 2 phía: Client kiểm tra để báo nhanh, Server kiểm tra lại (`Validation`) vì không tin dữ liệu gửi qua mạng.
 
-**14. Server tắt thì dữ liệu có mất không?** Không, dữ liệu nằm trong MySQL. Server lần đầu chạy tự tạo database `quanlythuoc`, 3 bảng và dữ liệu mẫu (`Database.java:46-53`).
+**14. Server tắt thì dữ liệu có mất không?** Không, dữ liệu nằm trong MySQL. Server lần đầu chạy tự tạo database `quanlythuoc`, 3 bảng và dữ liệu mẫu (`Database.java:47-53`).
 
-**15. Đổi cổng / đổi IP Server ở đâu?** `common/Protocol.java`: `PORT`, `HOST`. Sửa xong chạy lại cả Server và Client. Chạy 2 máy khác nhau thì đổi `HOST` thành IP máy Server.
+**15. Đổi cổng / đổi IP Server ở đâu?** `network/Protocol.java`: `PORT`, `HOST`. Sửa xong chạy lại cả Server và Client. Chạy 2 máy khác nhau thì đổi `HOST` thành IP máy Server.
 
 **16. Đổi thời gian chờ?** `TIMEOUT_MS` trong `Protocol.java`.
 
